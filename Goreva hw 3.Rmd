@@ -1,0 +1,157 @@
+---
+title: "Горева Екатерина Анатольевна, ДЗ 3"
+output: html_document
+date: "2024-03-28"
+---
+Библиотеки
+```{r}
+#install.packages('readxl')
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+```
+Открывает датасет
+```{r}
+data <- read_excel(path = 'pima.xlsx')
+head(data)
+```
+Информация о датасете
+```{r}
+str(data)
+```
+Проверка на пропуски 
+```{r}
+sum(is.na(data))
+```
+Защитимся от дубликатов 
+```{r}
+data[ ! duplicated(data), ]
+```
+Задание 1: Рассчитать описательные статистики для переменных glucose, pressure, mass.
+
+
+```{r}
+#Считаем статистики по глюкозе
+summary(data$glucose)
+```
+```{r}
+# то же самое, но вручную
+glucose <- data %>%
+  summarise(n = n(),
+            min = min(glucose),
+            max = max(glucose),
+            mean = mean(glucose),
+            sd = sd(glucose),
+            first_quart = quantile(glucose, probs = 0.25),
+            third_quart = quantile(glucose, probs = 0.75))
+glucose
+```
+
+```{r}
+# считаем статистики по массе
+summary(data$mass)
+```
+```{r}
+# то же самое, но вручную
+mass <- data %>%
+  summarise(n = n(),
+            min = min(mass),
+            max = max(mass),
+            mean = mean(mass),
+            sd = sd(mass),
+            first_quart = quantile(mass, probs = 0.25),
+            third_quart = quantile(mass, probs = 0.75))
+mass
+```
+
+```{r}
+# считаем статистики по давлению
+summary(data$pressure)
+```
+```{r}
+# то же самое, но вручную
+pressure <- data %>%
+  summarise(n = n(),
+            min = min(pressure),
+            max = max(pressure),
+            mean = mean(pressure),
+            sd = sd(pressure),
+            first_quart = quantile(pressure, probs = 0.25),
+            third_quart = quantile(pressure, probs = 0.75))
+pressure
+```
+
+Задание 2: Рассчитайте описательную статистику для переменной diabetes. Создайте на основе переменной age новую переменную age_group, которая будет отражать следующие возрастные группы: 21–35, 36–49 и 50+. Посчитайте описательную статистику для новой переменной.
+
+
+```{r}
+# статистика для переменной diabetes
+diabetes <- data %>%
+  group_by(diabetes) %>%
+  summarise(abs = n(),
+  percent = n() / nrow(data) * 100)
+diabetes
+```
+```{r}
+# создаем столбец с переменой age_group
+data$age_group <- ifelse(data$age >= 21 & data$age <= 35, '21–35',
+                         ifelse(data$age >= 36 & data$age <= 49, '36–49', '50+'))
+head(data)
+```
+```{r}
+# статистика для переменной age_group
+ag <- data %>%
+  group_by(age_group) %>%
+  summarise(abs = n(),
+  percent = n() / nrow(data) * 100)
+ag
+```
+Задание 3: Определите 90% доверительный интервал для переменной pedigree.
+```{r}
+
+# количество строк (количество индивидов)
+n <- length(data$pedigree)
+# z-статистика для 90% доверительного интервала 
+z <- qnorm(0.90)
+
+# Рассчитываем стандартную ошибку
+st_er <- sd(data$pedigree) / sqrt(n)
+
+# границы доверительного интервала
+lower <- mean(data$pedigree) - z * st_er
+upper <- mean(data$pedigree) + z * st_er
+
+cat(lower, '-', upper)
+```
+Задание 4: Постройте график плотности вероятности для переменной glucose и отметьте на нем среднее значение. Для той же переменной постройте гистограмму. Постройте два ящика с усами для значений pos и neg соответственно переменной diabetes.
+```{r}
+# график плотности для переменной glucose
+density_plot <- density(data$glucose, na.rm = TRUE)
+plot(density_plot, main = "График плотности переменной glucose", xlab = "Уровень глюкозы")
+# среднее значение на графике
+abline(v = mean(data$glucose, na.rm = TRUE), col = "red")
+```
+```{r}
+# гистограмма для переменной glucose
+hist(data$glucose, main = "Гистограмма для уровня глюкозы", xlab = "Уровень глюкозы",breaks = 40)
+# средний уровень на графике 
+abline(v = mean(data$glucose, na.rm = TRUE), col = "red", lwd = 2)
+```
+```{r}
+# построение боксплотов для переменной diabetes 
+# чтобы построить боксплоты, нужно преобразовать ее в фактор 
+data$diabetes <- factor(data$diabetes)
+# построение ящиков с усами
+boxplot(glucose ~ diabetes, data = data, main = "Боксплот для уровня глюкозы", xlab = "Статус заболевания", ylab = "Уровень глюкозы")
+```
+Задание 5: Постройте на одном графике две диаграммы рассеяния для наличия или отсутствия диабета. По оси X представьте значения обхвата трицепса, а по оси Y — массу тела. Выполните окрашивание, заливку и группирование по переменной diabetes.
+```{r}
+# создадим таблицу без аномального нулевого значения по обхватам
+data_2 <- subset(data, triceps != 0 & mass != 0)
+# строим диаграммы рассеяния
+ggplot(data_2, aes(x = triceps, y = mass, color = diabetes)) +  geom_point() + 
+  facet_grid(. ~ diabetes) + 
+  labs(x = "Обхват трицепса", y = "Масса тела", 
+       title = "Диаграмма рассеяния с группировкой по диабету") +  theme_classic()
+```
+
